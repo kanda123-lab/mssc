@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Checker - Working Version</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 25%, #48dbfb 50%, #ff9ff3 75%, #54a0ff 100%);
+            background-size: 400% 400%;
+            animation: rainbowShift 8s ease infinite;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        @keyframes rainbowShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #f9ca24);
+            background-size: 400% 400%;
+            animation: rainbowText 3s ease infinite;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            font-weight: 800;
+            text-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+        }
+
+        @keyframes rainbowText {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .form-container {
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .country-input {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .country-input:focus {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2), 0 0 20px rgba(78, 205, 196, 0.3);
+            background: linear-gradient(45deg, rgba(255, 107, 107, 0.05), rgba(78, 205, 196, 0.05));
+        }
+
+        .search-button {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 25%, #45b7d1 50%, #f9ca24 75%, #ff9ff3 100%);
+            background-size: 300% 300%;
+            animation: buttonRainbow 4s ease infinite;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        @keyframes buttonRainbow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .search-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-button:active {
+            transform: translateY(0);
+        }
+
+        .search-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            margin: 1rem 0;
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status.loading {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .status.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .temperature-result {
+            background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 25%, #45b7d1 50%, #f9ca24 75%, #ff9ff3 100%);
+            background-size: 400% 400%;
+            animation: resultRainbow 6s ease infinite;
+            color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            margin: 2rem 0;
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4), 0 0 50px rgba(78, 205, 196, 0.3);
+            display: none;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        @keyframes resultRainbow {
+            0%, 100% { background-position: 0% 50%; }
+            25% { background-position: 25% 50%; }
+            50% { background-position: 75% 50%; }
+            75% { background-position: 100% 50%; }
+        }
+
+        .temperature-result.show {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .temperature-display {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .temp-value {
+            font-size: 4rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .temp-unit {
+            font-size: 1.5rem;
+            opacity: 0.8;
+        }
+
+        .location-info {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .time-of-day-info {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .aqi-display {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .aqi-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .aqi-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .aqi-value {
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+
+        /* AQI Color Categories */
+        .aqi-good {
+            background: #4CAF50;
+            color: white;
+            box-shadow: 0 2px 10px rgba(76, 175, 80, 0.4);
+        }
+
+        .aqi-moderate {
+            background: #FFEB3B;
+            color: #333;
+            box-shadow: 0 2px 10px rgba(255, 235, 59, 0.4);
+        }
+
+        .aqi-unhealthy-sensitive {
+            background: #FF9800;
+            color: white;
+            box-shadow: 0 2px 10px rgba(255, 152, 0, 0.4);
+        }
+
+        .aqi-unhealthy {
+            background: #F44336;
+            color: white;
+            box-shadow: 0 2px 10px rgba(244, 67, 54, 0.4);
+        }
+
+        .aqi-very-unhealthy {
+            background: #9C27B0;
+            color: white;
+            box-shadow: 0 2px 10px rgba(156, 39, 176, 0.4);
+        }
+
+        .aqi-hazardous {
+            background: #8B0000;
+            color: white;
+            box-shadow: 0 2px 10px rgba(139, 0, 0, 0.6);
+            animation: aqiPulse 2s ease infinite;
+        }
+
+        @keyframes aqiPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .aqi-category {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            opacity: 0.95;
+        }
+
+        .aqi-description {
+            font-size: 0.9rem;
+            opacity: 0.85;
+            line-height: 1.4;
+            text-align: left;
+        }
+
+        .timestamp {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .instructions {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: linear-gradient(45deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1), rgba(69, 183, 209, 0.1));
+            background-size: 300% 300%;
+            animation: instructionGlow 5s ease infinite;
+            border-radius: 12px;
+            color: #444;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255, 107, 107, 0.2);
+        }
+
+        @keyframes instructionGlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .debug-panel {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #666;
+            text-align: left;
+            display: none;
+        }
+
+        .debug-panel.show {
+            display: block;
+        }
+
+        .api-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .api-status.connected { background: #4caf50; }
+        .api-status.disconnected { background: #f44336; }
+        .api-status.checking { background: #ff9800; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌡️ Temperature Checker</h1>
+        
+        <div class="form-container">
+            <div class="input-group">
+                <input
+                    type="text"
+                    id="countryInput"
+                    class="country-input"
+                    placeholder="Enter country or city name..."
+                    value="India"
+                />
+                <button
+                    type="button"
+                    id="searchButton"
+                    class="search-button"
+                    onclick="searchTemperature()"
+                >
+                    <span id="buttonText">Get Temperature</span>
+                </button>
+            </div>
+            
+            <div id="status" class="status" style="display: none;"></div>
+        </div>
+
+        <div id="temperatureResult" class="temperature-result">
+            <div class="location-info">📍 <span id="locationName"></span></div>
+            <div class="time-of-day-info"><span id="timeOfDayIcon"></span> <span id="timeOfDayText"></span></div>
+            <div class="temperature-display">
+                <span id="tempValue" class="temp-value"></span>
+                <span id="tempUnit" class="temp-unit"></span>
+            </div>
+            <div class="aqi-display">
+                <div class="aqi-badge" id="aqiBadge">
+                    <span class="aqi-label">AQI</span>
+                    <span class="aqi-value" id="aqiValue"></span>
+                </div>
+                <div class="aqi-category" id="aqiCategory"></div>
+                <div class="aqi-description" id="aqiDescription"></div>
+            </div>
+            <div class="timestamp">Last updated: <span id="updateTime"></span></div>
+        </div>
+
+        <div class="instructions">
+            <p>💡 Enter any country or city name and click "Get Temperature" or press Enter!</p>
+            <p>🔗 API Status: <span class="api-status" id="apiStatus"></span><span id="apiStatusText">Checking...</span></p>
+        </div>
+
+        <div id="debugPanel" class="debug-panel">
+            <strong>🔧 Debug Info:</strong>
+            <div id="debugContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        const API_BASE_URL = 'http://localhost:8080/api/v1/temperature';
+        let isLoading = false;
+
+        // DOM elements
+        const countryInput = document.getElementById('countryInput');
+        const searchButton = document.getElementById('searchButton');
+        const buttonText = document.getElementById('buttonText');
+        const status = document.getElementById('status');
+        const temperatureResult = document.getElementById('temperatureResult');
+        const locationName = document.getElementById('locationName');
+        const timeOfDayIcon = document.getElementById('timeOfDayIcon');
+        const timeOfDayText = document.getElementById('timeOfDayText');
+        const tempValue = document.getElementById('tempValue');
+        const tempUnit = document.getElementById('tempUnit');
+        const aqiBadge = document.getElementById('aqiBadge');
+        const aqiValue = document.getElementById('aqiValue');
+        const aqiCategory = document.getElementById('aqiCategory');
+        const aqiDescription = document.getElementById('aqiDescription');
+        const updateTime = document.getElementById('updateTime');
+        const apiStatus = document.getElementById('apiStatus');
+        const apiStatusText = document.getElementById('apiStatusText');
+        const debugPanel = document.getElementById('debugPanel');
+        const debugContent = document.getElementById('debugContent');
+
+        // Debug logging
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugContent.innerHTML += `<br>${timestamp}: ${message}`;
+            debugPanel.classList.add('show');
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        // Get AQI color class based on category
+        function getAqiColorClass(category) {
+            const categoryMap = {
+                'Good': 'aqi-good',
+                'Moderate': 'aqi-moderate',
+                'Unhealthy for Sensitive Groups': 'aqi-unhealthy-sensitive',
+                'Unhealthy': 'aqi-unhealthy',
+                'Very Unhealthy': 'aqi-very-unhealthy',
+                'Hazardous': 'aqi-hazardous'
+            };
+            return categoryMap[category] || 'aqi-moderate';
+        }
+
+        // Show status message
+        function showStatus(message, type = 'loading') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        // Hide status message
+        function hideStatus() {
+            status.style.display = 'none';
+        }
+
+        // Set loading state
+        function setLoadingState(loading) {
+            isLoading = loading;
+            searchButton.disabled = loading;
+            countryInput.disabled = loading;
+            
+            if (loading) {
+                buttonText.innerHTML = '<span class="spinner"></span>Loading...';
+                showStatus('🔄 Fetching temperature data...', 'loading');
+            } else {
+                buttonText.textContent = 'Get Temperature';
+                hideStatus();
+            }
+        }
+
+        // Check API health
+        async function checkApiHealth() {
+            try {
+                apiStatus.className = 'api-status checking';
+                apiStatusText.textContent = 'Checking...';
+                log('Checking API health...');
+                
+                const response = await fetch(`${API_BASE_URL}/India`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    apiStatus.className = 'api-status connected';
+                    apiStatusText.textContent = 'Connected';
+                    log('✅ API is healthy and responding');
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                apiStatus.className = 'api-status disconnected';
+                apiStatusText.textContent = 'Disconnected';
+                log(`❌ API health check failed: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Main search function
+        async function searchTemperature() {
+            const country = countryInput.value.trim();
+            
+            if (!country) {
+                showStatus('❌ Please enter a country or city name', 'error');
+                countryInput.focus();
+                return;
+            }
+
+            log(`🔍 Searching temperature for: ${country}`);
+            setLoadingState(true);
+            temperatureResult.classList.remove('show');
+
+            try {
+                const url = `${API_BASE_URL}/${encodeURIComponent(country)}`;
+                log(`📡 Making request to: ${url}`);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                log(`📥 Response status: ${response.status} ${response.statusText}`);
+
+                const data = await response.json();
+                log(`📊 Received data: ${JSON.stringify(data)}`);
+
+                if (!response.ok) {
+                    // Handle validation errors from backend
+                    const errorMessage = data.error || `HTTP ${response.status}: ${response.statusText}`;
+                    throw new Error(errorMessage);
+                }
+
+                // Display results
+                locationName.textContent = data.location;
+                
+                // Display time of day information with appropriate icons
+                if (data.timeOfDay) {
+                    const timeIconMap = {
+                        'Morning': '🌅',
+                        'Day': '☀️',
+                        'Evening': '🌆',
+                        'Night': '🌙'
+                    };
+                    timeOfDayIcon.textContent = timeIconMap[data.timeOfDay] || '🕐';
+                    timeOfDayText.textContent = data.timeOfDay;
+                } else {
+                    timeOfDayIcon.textContent = '🕐';
+                    timeOfDayText.textContent = 'Time info unavailable';
+                }
+                
+                tempValue.textContent = Math.round(data.temperature * 10) / 10 + '°';
+                tempUnit.textContent = data.unit;
+                
+                // Display AQI information with color coding
+                if (data.aqi !== undefined && data.aqiCategory) {
+                    aqiValue.textContent = data.aqi;
+                    aqiCategory.textContent = data.aqiCategory;
+                    aqiDescription.textContent = data.aqiDescription || 'Air quality information';
+                    
+                    // Remove existing AQI classes and add appropriate color class
+                    aqiBadge.className = 'aqi-badge ' + getAqiColorClass(data.aqiCategory);
+                } else {
+                    aqiValue.textContent = '--';
+                    aqiCategory.textContent = 'AQI data unavailable';
+                    aqiDescription.textContent = 'Air quality information not available';
+                    aqiBadge.className = 'aqi-badge aqi-moderate';
+                }
+                
+                updateTime.textContent = new Date(data.timestamp).toLocaleString();
+
+                temperatureResult.classList.add('show');
+                showStatus('✅ Temperature data loaded successfully!', 'success');
+                
+                setTimeout(() => hideStatus(), 3000);
+                
+                log('✅ Successfully displayed temperature data');
+
+            } catch (error) {
+                log(`❌ Error occurred: ${error.message}`);
+                showStatus(`❌ Error: ${error.message}. Check if the backend server is running.`, 'error');
+                
+                // Auto-hide error after 5 seconds
+                setTimeout(() => hideStatus(), 5000);
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        // Event listeners
+        searchButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            searchTemperature();
+        });
+
+        countryInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchTemperature();
+            }
+        });
+
+        countryInput.addEventListener('input', function() {
+            if (status.style.display !== 'none') {
+                hideStatus();
+            }
+        });
+
+        // Toggle debug panel with double-click
+        document.addEventListener('dblclick', function() {
+            debugPanel.classList.toggle('show');
+        });
+
+        // Initialize
+        window.addEventListener('load', function() {
+            log('🚀 Temperature Checker loaded');
+            checkApiHealth();
+            countryInput.focus();
+            countryInput.select();
+            
+            // Test button functionality
+            log('🔧 Button click handler attached');
+            log('⌨️ Enter key handler attached');
+        });
+
+        // Expose function globally for debugging
+        window.searchTemperature = searchTemperature;
+        window.checkApiHealth = checkApiHealth;
+    </script>
+</body>
+</html>

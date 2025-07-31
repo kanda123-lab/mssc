@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Temperature Test</title>
+</head>
+<body>
+    <h1>Temperature API Test</h1>
+    <button onclick="testAPI()">Test India Temperature</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Loading...';
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/temperature/India');
+                const data = await response.json();
+                result.innerHTML = `
+                    <h2>Success!</h2>
+                    <p>Temperature: ${data.temperature}°${data.unit}</p>
+                    <p>Location: ${data.location}</p>
+                    <p>Time: ${data.timestamp}</p>
+                `;
+            } catch (error) {
+                result.innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
