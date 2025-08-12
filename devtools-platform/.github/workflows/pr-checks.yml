@@ -1,0 +1,319 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Quick validation for draft PRs
+  validate:
+    name: Quick Validation
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Quick lint check
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+  # Test changed files only
+  test-changes:
+    name: Test Changed Files
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # Get changed TypeScript/JavaScript files
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(ts|tsx|js|jsx)$' | tr '\n' ' ')
+          echo "changed-files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "Changed files: $CHANGED_FILES"
+
+      - name: Run tests for changed files
+        if: steps.changed-files.outputs.changed-files != ''
+        run: |
+          # Run Jest with findRelatedTests for changed files
+          npm test -- --findRelatedTests ${{ steps.changed-files.outputs.changed-files }} --coverage
+        continue-on-error: true
+
+      - name: Lint changed files
+        if: steps.changed-files.outputs.changed-files != ''
+        run: |
+          npx eslint ${{ steps.changed-files.outputs.changed-files }}
+
+  # Size impact analysis
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Build current branch
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Analyze bundle size
+        run: |
+          # Calculate bundle sizes
+          CURRENT_SIZE=$(du -sh .next/static 2>/dev/null | cut -f1 || echo "0K")
+          echo "Current bundle size: $CURRENT_SIZE"
+          echo "CURRENT_SIZE=$CURRENT_SIZE" >> $GITHUB_ENV
+
+      - name: Checkout base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }}
+
+      - name: Install dependencies (base)
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Build base branch
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Analyze base bundle size
+        run: |
+          BASE_SIZE=$(du -sh .next/static 2>/dev/null | cut -f1 || echo "0K")
+          echo "Base bundle size: $BASE_SIZE"
+          echo "BASE_SIZE=$BASE_SIZE" >> $GITHUB_ENV
+
+      - name: Comment bundle analysis
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const currentSize = process.env.CURRENT_SIZE;
+            const baseSize = process.env.BASE_SIZE;
+            
+            const comment = `## 📦 Bundle Size Analysis
+            
+            | Branch | Bundle Size | Change |
+            |--------|-------------|--------|
+            | Base (${{ github.base_ref }}) | ${baseSize} | - |
+            | Current | ${currentSize} | 📊 |
+            
+            > 💡 Bundle size analysis helps track performance impact of changes.
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Critical path E2E tests for PRs
+  critical-e2e:
+    name: Critical Path E2E Tests
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run critical path tests
+        run: |
+          # Run only critical user journeys
+          npx playwright test e2e/homepage.spec.ts e2e/json-formatter.spec.ts --project=chromium
+        continue-on-error: true
+
+  # Accessibility check for PRs
+  a11y-check:
+    name: Accessibility Check
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run accessibility tests
+        run: npx playwright test e2e/accessibility.spec.ts --project=chromium
+
+  # PR readiness check
+  pr-ready:
+    name: PR Readiness Check
+    runs-on: ubuntu-latest
+    needs: [validate, test-changes, bundle-analysis, critical-e2e, a11y-check]
+    if: always() && github.event.pull_request.draft == false
+    
+    steps:
+      - name: Check PR readiness
+        run: |
+          echo "## 🔍 PR Readiness Summary" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.validate.result }}" == "success" ]]; then
+            echo "✅ Code validation passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Code validation failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.test-changes.result }}" == "success" ]]; then
+            echo "✅ Tests for changed files passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Tests for changed files had issues" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.critical-e2e.result }}" == "success" ]]; then
+            echo "✅ Critical path E2E tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Critical path E2E tests had issues" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.a11y-check.result }}" == "success" ]]; then
+            echo "✅ Accessibility tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Accessibility tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Fail if critical checks fail
+          if [[ "${{ needs.validate.result }}" != "success" ]] || [[ "${{ needs.a11y-check.result }}" != "success" ]]; then
+            echo "❌ PR has critical issues that must be resolved"
+            exit 1
+          fi
+          
+          echo "✅ PR is ready for review"
+
+  # Auto-assign reviewers based on changed files
+  assign-reviewers:
+    name: Auto-assign Reviewers
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened' || github.event.action == 'ready_for_review'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Auto-assign based on CODEOWNERS
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Simple auto-assignment logic
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request.number;
+            
+            // You can customize this logic based on your team structure
+            const reviewers = ['code-reviewer-1']; // Replace with actual usernames
+            
+            if (reviewers.length > 0) {
+              try {
+                await github.rest.pulls.requestReviewers({
+                  owner,
+                  repo,
+                  pull_number,
+                  reviewers
+                });
+                console.log(`Assigned reviewers: ${reviewers.join(', ')}`);
+              } catch (error) {
+                console.log('Could not assign reviewers:', error.message);
+              }
+            }
+
+  # Draft PR notification
+  draft-pr:
+    name: Draft PR Notification
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == true
+    
+    steps:
+      - name: Comment on draft PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## 📝 Draft Pull Request
+            
+            This is a draft PR. The following checks will run when you mark it as ready for review:
+            
+            - 🔍 Code validation (linting, type checking)
+            - 🧪 Tests for changed files
+            - 📦 Bundle size analysis
+            - 🎭 Critical path E2E tests
+            - ♿ Accessibility checks
+            
+            > 💡 You can run \`npm run test:all\` locally to run all checks before marking as ready.
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

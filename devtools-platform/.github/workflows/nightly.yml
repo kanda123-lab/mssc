@@ -1,0 +1,468 @@
+name: Nightly Comprehensive Testing
+
+on:
+  schedule:
+    # Run every night at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_environment:
+        description: 'Test environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      include_performance:
+        description: 'Include performance tests'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  TEST_ENV: ${{ inputs.test_environment || 'staging' }}
+
+jobs:
+  # Full test suite
+  comprehensive-tests:
+    name: Comprehensive Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+        viewport: [desktop, tablet, mobile]
+      fail-fast: false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Run E2E tests (${{ matrix.browser }} - ${{ matrix.viewport }})
+        run: |
+          if [[ "${{ matrix.viewport }}" == "mobile" ]]; then
+            npx playwright test --project="${{ matrix.browser }}" --grep="mobile|responsive"
+          elif [[ "${{ matrix.viewport }}" == "tablet" ]]; then
+            npx playwright test --project="${{ matrix.browser }}" --grep="tablet|responsive"
+          else
+            npx playwright test --project="${{ matrix.browser }}"
+          fi
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report-${{ matrix.browser }}-${{ matrix.viewport }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.browser }}-${{ matrix.viewport }}
+          path: |
+            playwright-report-${{ matrix.browser }}-${{ matrix.viewport }}/
+            test-results/
+          retention-days: 7
+
+  # Performance benchmarking
+  performance-benchmark:
+    name: Performance Benchmarking
+    runs-on: ubuntu-latest
+    if: inputs.include_performance != false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install Playwright and Lighthouse
+        run: |
+          npx playwright install --with-deps
+          npm install -g lighthouse
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Run comprehensive performance tests
+        run: npx playwright test e2e/performance.spec.ts --project=chromium
+
+      - name: Run Lighthouse audit
+        run: |
+          # Start the application
+          npm start &
+          SERVER_PID=$!
+          
+          # Wait for server to start
+          sleep 10
+          
+          # Run Lighthouse
+          lighthouse http://localhost:3000 \
+            --output=html \
+            --output-path=./lighthouse-report.html \
+            --chrome-flags="--headless" \
+            --quiet
+            
+          # Run Lighthouse for JSON formatter
+          lighthouse http://localhost:3000/tools/json-formatter \
+            --output=html \
+            --output-path=./lighthouse-json-formatter.html \
+            --chrome-flags="--headless" \
+            --quiet
+            
+          # Stop server
+          kill $SERVER_PID
+
+      - name: Upload performance reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-reports
+          path: |
+            lighthouse-*.html
+            test-results/
+          retention-days: 14
+
+  # Security analysis
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run npm audit
+        run: |
+          echo "## NPM Security Audit" > security-report.md
+          npm audit --json > npm-audit.json || true
+          
+          # Parse and format the results
+          node -e "
+          const audit = JSON.parse(require('fs').readFileSync('npm-audit.json', 'utf8'));
+          if (audit.vulnerabilities) {
+            const vulns = Object.values(audit.vulnerabilities);
+            const high = vulns.filter(v => v.severity === 'high').length;
+            const moderate = vulns.filter(v => v.severity === 'moderate').length;
+            const low = vulns.filter(v => v.severity === 'low').length;
+            console.log(\`High: \${high}, Moderate: \${moderate}, Low: \${low}\`);
+          }
+          " >> security-report.md
+
+      - name: Run Snyk security check
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=medium --file=package.json
+        continue-on-error: true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            security-report.md
+            npm-audit.json
+          retention-days: 30
+
+  # Accessibility comprehensive audit
+  accessibility-audit:
+    name: Accessibility Comprehensive Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run comprehensive accessibility tests
+        run: |
+          # Run all accessibility tests
+          npx playwright test e2e/accessibility.spec.ts
+          
+          # Generate accessibility report
+          echo "# Accessibility Audit Report" > a11y-report.md
+          echo "Generated on: $(date)" >> a11y-report.md
+          echo "" >> a11y-report.md
+
+      - name: Upload accessibility reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-reports
+          path: |
+            a11y-report.md
+            test-results/
+          retention-days: 14
+
+  # Bundle analysis and optimization
+  bundle-analysis:
+    name: Bundle Analysis & Optimization
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Analyze bundle
+        run: |
+          npm run analyze
+          
+          # Generate bundle report
+          echo "# Bundle Analysis Report" > bundle-report.md
+          echo "Generated on: $(date)" >> bundle-report.md
+          echo "" >> bundle-report.md
+          
+          # Get bundle sizes
+          if [ -d ".next/static" ]; then
+            echo "## Bundle Sizes" >> bundle-report.md
+            echo "\`\`\`" >> bundle-report.md
+            du -h .next/static/chunks/*.js | sort -hr >> bundle-report.md
+            echo "\`\`\`" >> bundle-report.md
+            echo "" >> bundle-report.md
+            
+            echo "## Total Size" >> bundle-report.md
+            echo "\`\`\`" >> bundle-report.md
+            du -sh .next/static >> bundle-report.md
+            echo "\`\`\`" >> bundle-report.md
+          fi
+
+      - name: Check for large bundles
+        run: |
+          # Find bundles larger than 1MB
+          LARGE_BUNDLES=$(find .next/static -name "*.js" -size +1M 2>/dev/null || true)
+          if [ -n "$LARGE_BUNDLES" ]; then
+            echo "⚠️ Found large bundle files:"
+            echo "$LARGE_BUNDLES"
+          else
+            echo "✅ No excessively large bundles found"
+          fi
+
+      - name: Upload bundle analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: |
+            bundle-report.md
+            .next/analyze/
+          retention-days: 30
+
+  # Health check and monitoring
+  health-check:
+    name: Application Health Check
+    runs-on: ubuntu-latest
+    needs: [comprehensive-tests]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Build and start application
+        run: |
+          npm run build
+          npm start &
+          SERVER_PID=$!
+          echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+          
+          # Wait for server to start
+          sleep 15
+
+      - name: Health check endpoints
+        run: |
+          echo "## Health Check Results" > health-check.md
+          echo "Generated on: $(date)" >> health-check.md
+          echo "" >> health-check.md
+          
+          # Check main pages
+          PAGES=("/" "/tools/json-formatter" "/tools/api-tester" "/tools/base64")
+          
+          for page in "${PAGES[@]}"; do
+            echo "Checking: http://localhost:3000$page"
+            if curl -f -s "http://localhost:3000$page" > /dev/null; then
+              echo "✅ $page - OK" >> health-check.md
+            else
+              echo "❌ $page - FAILED" >> health-check.md
+            fi
+          done
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ ! -z "$SERVER_PID" ]; then
+            kill $SERVER_PID || true
+          fi
+
+      - name: Upload health check results
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-check-results
+          path: health-check.md
+          retention-days: 7
+
+  # Generate comprehensive report
+  generate-report:
+    name: Generate Nightly Report
+    runs-on: ubuntu-latest
+    needs: [comprehensive-tests, performance-benchmark, security-audit, accessibility-audit, bundle-analysis, health-check]
+    if: always()
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Generate comprehensive report
+        run: |
+          echo "# Nightly Testing Report" > nightly-report.md
+          echo "**Generated on:** $(date)" >> nightly-report.md
+          echo "**Environment:** ${{ env.TEST_ENV }}" >> nightly-report.md
+          echo "" >> nightly-report.md
+          
+          echo "## 📊 Test Results Summary" >> nightly-report.md
+          echo "" >> nightly-report.md
+          
+          # Check job statuses
+          if [[ "${{ needs.comprehensive-tests.result }}" == "success" ]]; then
+            echo "✅ **Comprehensive Tests:** PASSED" >> nightly-report.md
+          else
+            echo "❌ **Comprehensive Tests:** FAILED" >> nightly-report.md
+          fi
+          
+          if [[ "${{ needs.performance-benchmark.result }}" == "success" ]]; then
+            echo "✅ **Performance Tests:** PASSED" >> nightly-report.md
+          else
+            echo "⚠️ **Performance Tests:** ISSUES FOUND" >> nightly-report.md
+          fi
+          
+          if [[ "${{ needs.security-audit.result }}" == "success" ]]; then
+            echo "✅ **Security Audit:** PASSED" >> nightly-report.md
+          else
+            echo "⚠️ **Security Audit:** VULNERABILITIES FOUND" >> nightly-report.md
+          fi
+          
+          if [[ "${{ needs.accessibility-audit.result }}" == "success" ]]; then
+            echo "✅ **Accessibility Audit:** PASSED" >> nightly-report.md
+          else
+            echo "❌ **Accessibility Audit:** VIOLATIONS FOUND" >> nightly-report.md
+          fi
+          
+          if [[ "${{ needs.health-check.result }}" == "success" ]]; then
+            echo "✅ **Health Check:** PASSED" >> nightly-report.md
+          else
+            echo "❌ **Health Check:** FAILED" >> nightly-report.md
+          fi
+          
+          echo "" >> nightly-report.md
+          echo "## 📈 Detailed Reports" >> nightly-report.md
+          echo "" >> nightly-report.md
+          echo "- 🎭 [Test Results](./test-results/)" >> nightly-report.md
+          echo "- 🚀 [Performance Reports](./performance-reports/)" >> nightly-report.md
+          echo "- 🔒 [Security Reports](./security-reports/)" >> nightly-report.md
+          echo "- ♿ [Accessibility Reports](./accessibility-reports/)" >> nightly-report.md
+          echo "- 📦 [Bundle Analysis](./bundle-analysis/)" >> nightly-report.md
+          echo "- 🏥 [Health Check](./health-check-results/)" >> nightly-report.md
+
+      - name: Upload nightly report
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-report
+          path: nightly-report.md
+          retention-days: 30
+
+      - name: Create issue on failure
+        if: needs.comprehensive-tests.result == 'failure' || needs.accessibility-audit.result == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 Nightly Tests Failed - ${new Date().toLocaleDateString()}`;
+            const body = `
+            ## Nightly Test Failure Report
+            
+            **Date:** ${new Date().toISOString()}
+            **Environment:** ${{ env.TEST_ENV }}
+            
+            ### Failed Jobs:
+            ${needs.comprehensive-tests.result === 'failure' ? '❌ Comprehensive Tests\n' : ''}
+            ${needs.accessibility-audit.result === 'failure' ? '❌ Accessibility Audit\n' : ''}
+            
+            ### Action Required:
+            - [ ] Review test failures in the [workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - [ ] Fix critical issues
+            - [ ] Update tests if needed
+            
+            **Auto-generated by nightly testing workflow**
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bug', 'ci/cd', 'priority-high']
+            });
