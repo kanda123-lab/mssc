@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Connection String Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for better UX */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <div class="mb-8">
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">🔗 Database Connection String Builder</h1>
+                <p class="text-gray-600">Build connection strings for all major databases with ease</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Configuration Panel -->
+                <div class="space-y-6">
+                    <div class="bg-blue-50 p-6 rounded-lg">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">⚙️ Database Configuration</h2>
+                        
+                        <div class="space-y-4">
+                            <!-- Database Type -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Database Type</label>
+                                <select id="dbType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="postgresql">PostgreSQL</option>
+                                    <option value="mysql">MySQL</option>
+                                    <option value="mariadb">MariaDB</option>
+                                    <option value="mssql">SQL Server</option>
+                                    <option value="oracle">Oracle Database</option>
+                                    <option value="sqlite">SQLite</option>
+                                    <option value="mongodb">MongoDB</option>
+                                    <option value="redis">Redis</option>
+                                    <option value="cassandra">Apache Cassandra</option>
+                                    <option value="elasticsearch">Elasticsearch</option>
+                                </select>
+                            </div>
+
+                            <!-- Host -->
+                            <div id="hostField">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Host</label>
+                                <input type="text" id="host" value="localhost" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <!-- Port -->
+                            <div id="portField">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Port</label>
+                                <input type="number" id="port" value="5432" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <!-- Database -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2" id="dbLabel">Database Name</label>
+                                <input type="text" id="database" placeholder="my_database" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <!-- Username -->
+                            <div id="usernameField">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                                <input type="text" id="username" placeholder="username" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <!-- Password -->
+                            <div id="passwordField">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                                <div class="relative">
+                                    <input type="password" id="password" placeholder="password" 
+                                        class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <button type="button" id="togglePassword" 
+                                        class="absolute right-2 top-2 text-gray-500 hover:text-gray-700 p-1">
+                                        👁️
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Generate Button -->
+                            <button id="generateBtn" 
+                                class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium">
+                                🚀 Generate Connection String
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Templates -->
+                    <div class="bg-green-50 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">⚡ Quick Templates</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="loadTemplate('postgresql', 'localhost', 5432, 'postgres', 'postgres')" 
+                                class="p-2 text-sm bg-white border border-green-300 rounded hover:bg-green-100 transition-colors">
+                                🐘 Local PostgreSQL
+                            </button>
+                            <button onclick="loadTemplate('mysql', 'localhost', 3306, 'root', 'password')" 
+                                class="p-2 text-sm bg-white border border-green-300 rounded hover:bg-green-100 transition-colors">
+                                🐬 Local MySQL
+                            </button>
+                            <button onclick="loadTemplate('mongodb', 'localhost', 27017, 'admin', 'password')" 
+                                class="p-2 text-sm bg-white border border-green-300 rounded hover:bg-green-100 transition-colors">
+                                🍃 Local MongoDB
+                            </button>
+                            <button onclick="loadTemplate('redis', 'localhost', 6379, '', 'password')" 
+                                class="p-2 text-sm bg-white border border-green-300 rounded hover:bg-green-100 transition-colors">
+                                🔴 Local Redis
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output Panel -->
+                <div class="space-y-6">
+                    <div class="bg-yellow-50 p-6 rounded-lg">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">📝 Connection String Output</h2>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Generated Connection String</label>
+                                <textarea id="connectionString" rows="6" readonly
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm"
+                                    placeholder="Your connection string will appear here..."></textarea>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button id="copyBtn" 
+                                    class="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors">
+                                    📋 Copy to Clipboard
+                                </button>
+                                <button id="maskBtn" 
+                                    class="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors">
+                                    👁️ Toggle Password
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Formats -->
+                    <div class="bg-purple-50 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">📦 Export Formats</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="exportFormat('env')" 
+                                class="p-2 text-sm bg-white border border-purple-300 rounded hover:bg-purple-100 transition-colors">
+                                📄 .env File
+                            </button>
+                            <button onclick="exportFormat('json')" 
+                                class="p-2 text-sm bg-white border border-purple-300 rounded hover:bg-purple-100 transition-colors">
+                                📊 JSON Config
+                            </button>
+                            <button onclick="exportFormat('yaml')" 
+                                class="p-2 text-sm bg-white border border-purple-300 rounded hover:bg-purple-100 transition-colors">
+                                📋 YAML Config
+                            </button>
+                            <button onclick="exportFormat('docker')" 
+                                class="p-2 text-sm bg-white border border-purple-300 rounded hover:bg-purple-100 transition-colors">
+                                🐳 Docker Compose
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Examples -->
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">💡 Examples</h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="p-2 bg-white rounded border-l-4 border-blue-400">
+                                <strong>PostgreSQL:</strong><br>
+                                <code class="text-gray-600">postgresql://user:pass@localhost:5432/mydb</code>
+                            </div>
+                            <div class="p-2 bg-white rounded border-l-4 border-green-400">
+                                <strong>MySQL:</strong><br>
+                                <code class="text-gray-600">mysql://user:pass@localhost:3306/mydb</code>
+                            </div>
+                            <div class="p-2 bg-white rounded border-l-4 border-yellow-400">
+                                <strong>MongoDB:</strong><br>
+                                <code class="text-gray-600">mongodb://user:pass@localhost:27017/mydb</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Database port defaults
+        const DB_PORTS = {
+            postgresql: 5432,
+            mysql: 3306,
+            mariadb: 3306,
+            mssql: 1433,
+            oracle: 1521,
+            sqlite: 0,
+            mongodb: 27017,
+            redis: 6379,
+            cassandra: 9042,
+            elasticsearch: 9200
+        };
+
+        let showPassword = false;
+        let connectionStringGenerated = '';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            const dbTypeSelect = document.getElementById('dbType');
+            const generateBtn = document.getElementById('generateBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const maskBtn = document.getElementById('maskBtn');
+            const togglePasswordBtn = document.getElementById('togglePassword');
+
+            dbTypeSelect.addEventListener('change', updateFieldsForDbType);
+            generateBtn.addEventListener('click', generateConnectionString);
+            copyBtn.addEventListener('click', copyToClipboard);
+            maskBtn.addEventListener('click', togglePasswordMask);
+            togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
+
+            // Auto-generate on input changes
+            ['host', 'port', 'database', 'username', 'password'].forEach(id => {
+                document.getElementById(id).addEventListener('input', generateConnectionString);
+            });
+
+            updateFieldsForDbType();
+        });
+
+        function updateFieldsForDbType() {
+            const dbType = document.getElementById('dbType').value;
+            const isFileDB = dbType === 'sqlite';
+            
+            // Update port
+            document.getElementById('port').value = DB_PORTS[dbType] || 5432;
+            
+            // Show/hide fields based on database type
+            document.getElementById('hostField').style.display = isFileDB ? 'none' : 'block';
+            document.getElementById('portField').style.display = isFileDB ? 'none' : 'block';
+            document.getElementById('usernameField').style.display = isFileDB ? 'none' : 'block';
+            document.getElementById('passwordField').style.display = isFileDB ? 'none' : 'block';
+            
+            // Update database label
+            document.getElementById('dbLabel').textContent = isFileDB ? 'Database File Path' : 'Database Name';
+            document.getElementById('database').placeholder = isFileDB ? '/path/to/database.db' : 'database_name';
+            
+            generateConnectionString();
+        }
+
+        function generateConnectionString() {
+            const dbType = document.getElementById('dbType').value;
+            const host = document.getElementById('host').value || 'localhost';
+            const port = document.getElementById('port').value || DB_PORTS[dbType];
+            const database = document.getElementById('database').value || 'mydb';
+            const username = document.getElementById('username').value || 'user';
+            const password = document.getElementById('password').value || '';
+
+            let connectionString = '';
+
+            switch (dbType) {
+                case 'postgresql':
+                    connectionString = `postgresql://${username}:${password}@${host}:${port}/${database}`;
+                    break;
+                case 'mysql':
+                case 'mariadb':
+                    connectionString = `${dbType}://${username}:${password}@${host}:${port}/${database}`;
+                    break;
+                case 'mssql':
+                    connectionString = `Server=${host},${port};Database=${database};User Id=${username};Password=${password};Encrypt=true;`;
+                    break;
+                case 'oracle':
+                    connectionString = `jdbc:oracle:thin:@${host}:${port}:${database}`;
+                    break;
+                case 'sqlite':
+                    connectionString = database || 'database.db';
+                    break;
+                case 'mongodb':
+                    connectionString = `mongodb://${username}:${password}@${host}:${port}/${database}`;
+                    break;
+                case 'redis':
+                    connectionString = `redis://:${password}@${host}:${port}`;
+                    break;
+                case 'cassandra':
+                    connectionString = `${host}:${port}`;
+                    break;
+                case 'elasticsearch':
+                    connectionString = `http://${username}:${password}@${host}:${port}`;
+                    break;
+                default:
+                    connectionString = `${dbType}://${username}:${password}@${host}:${port}/${database}`;
+            }
+
+            connectionStringGenerated = connectionString;
+            updateConnectionStringDisplay();
+        }
+
+        function updateConnectionStringDisplay() {
+            const textarea = document.getElementById('connectionString');
+            if (showPassword) {
+                textarea.value = connectionStringGenerated;
+            } else {
+                textarea.value = maskPasswordInString(connectionStringGenerated);
+            }
+        }
+
+        function maskPasswordInString(str) {
+            return str
+                .replace(/(password=|:)[^;&@\s]+/gi, '$1***')
+                .replace(/\/\/([^:]+):([^@]+)@/g, '//$1:***@');
+        }
+
+        function togglePasswordMask() {
+            showPassword = !showPassword;
+            updateConnectionStringDisplay();
+            document.getElementById('maskBtn').textContent = showPassword ? '🙈 Hide Password' : '👁️ Show Password';
+        }
+
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+        }
+
+        async function copyToClipboard() {
+            try {
+                await navigator.clipboard.writeText(connectionStringGenerated);
+                const btn = document.getElementById('copyBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.className = btn.className.replace('bg-green-600', 'bg-green-500');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.className = btn.className.replace('bg-green-500', 'bg-green-600');
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy to clipboard');
+            }
+        }
+
+        function loadTemplate(dbType, host, port, username, password) {
+            document.getElementById('dbType').value = dbType;
+            document.getElementById('host').value = host;
+            document.getElementById('port').value = port;
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+            updateFieldsForDbType();
+        }
+
+        function exportFormat(format) {
+            const dbType = document.getElementById('dbType').value;
+            const host = document.getElementById('host').value || 'localhost';
+            const port = document.getElementById('port').value;
+            const database = document.getElementById('database').value || 'mydb';
+            const username = document.getElementById('username').value || 'user';
+            const password = document.getElementById('password').value || '';
+
+            let content = '';
+            let filename = '';
+
+            switch (format) {
+                case 'env':
+                    content = `# Database Configuration\nDB_TYPE=${dbType.toUpperCase()}\nDB_HOST=${host}\nDB_PORT=${port}\nDB_NAME=${database}\nDB_USER=${username}\nDB_PASSWORD=${password}\nDB_CONNECTION_STRING=${connectionStringGenerated}`;
+                    filename = '.env';
+                    break;
+                case 'json':
+                    content = JSON.stringify({
+                        database: {
+                            type: dbType,
+                            host: host,
+                            port: parseInt(port),
+                            database: database,
+                            username: username,
+                            password: password,
+                            connectionString: connectionStringGenerated
+                        }
+                    }, null, 2);
+                    filename = 'database-config.json';
+                    break;
+                case 'yaml':
+                    content = `database:\n  type: ${dbType}\n  host: ${host}\n  port: ${port}\n  database: ${database}\n  username: ${username}\n  password: ${password}\n  connectionString: ${connectionStringGenerated}`;
+                    filename = 'database-config.yaml';
+                    break;
+                case 'docker':
+                    content = `version: '3.8'\nservices:\n  database:\n    image: ${getDockerImage(dbType)}\n    environment:\n      - DB_HOST=${host}\n      - DB_PORT=${port}\n      - DB_NAME=${database}\n      - DB_USER=${username}\n      - DB_PASSWORD=${password}\n    ports:\n      - "${port}:${port}"`;
+                    filename = 'docker-compose.yml';
+                    break;
+            }
+
+            downloadFile(content, filename);
+        }
+
+        function getDockerImage(dbType) {
+            const images = {
+                postgresql: 'postgres:15',
+                mysql: 'mysql:8.0',
+                mariadb: 'mariadb:10',
+                mongodb: 'mongo:7.0',
+                redis: 'redis:7.0',
+                elasticsearch: 'elasticsearch:8.0'
+            };
+            return images[dbType] || `${dbType}:latest`;
+        }
+
+        function downloadFile(content, filename) {
+            const element = document.createElement('a');
+            const file = new Blob([content], { type: 'text/plain' });
+            element.href = URL.createObjectURL(file);
+            element.download = filename;
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NPM Package Analyzer Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 30px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            background: #f9fafb;
+        }
+        
+        .demo-section h2 {
+            color: #1f2937;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e5e7eb;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #dc2626;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+        
+        .success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        
+        .stat-item {
+            background: linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%);
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        
+        pre {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 NPM Package Analyzer</h1>
+            <p>Comprehensive bundle analysis and dependency management tool</p>
+        </div>
+        
+        <div class="content">
+            <!-- Package Analysis Demo -->
+            <div class="demo-section">
+                <h2>🔍 Package Analysis</h2>
+                <div class="input-group">
+                    <label for="packageName">Package Name:</label>
+                    <input type="text" id="packageName" placeholder="Enter NPM package name (e.g., react, lodash, axios)" value="react">
+                </div>
+                <button class="btn" onclick="analyzePackage()">Analyze Package</button>
+                <div id="analysisResults" class="results" style="display: none;"></div>
+            </div>
+            
+            <!-- Package Search Demo -->
+            <div class="demo-section">
+                <h2>🔎 Package Search</h2>
+                <div class="input-group">
+                    <label for="searchQuery">Search Query:</label>
+                    <input type="text" id="searchQuery" placeholder="Search NPM packages (e.g., http client)" value="http client">
+                </div>
+                <button class="btn" onclick="searchPackages()">Search Packages</button>
+                <div id="searchResults" class="results" style="display: none;"></div>
+            </div>
+            
+            <!-- Bundle Size Demo -->
+            <div class="demo-section">
+                <h2>📦 Bundle Size Analysis</h2>
+                <div class="input-group">
+                    <label for="bundlePackage">Package Name:</label>
+                    <input type="text" id="bundlePackage" placeholder="Package for bundle analysis" value="lodash">
+                </div>
+                <button class="btn" onclick="analyzeBundleSize()">Analyze Bundle Size</button>
+                <div id="bundleResults" class="results" style="display: none;"></div>
+            </div>
+            
+            <!-- API Status -->
+            <div class="demo-section">
+                <h2>🔧 API Status</h2>
+                <button class="btn" onclick="checkApiStatus()">Check Backend Status</button>
+                <div id="statusResults" class="results" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api/v1';
+        
+        function showLoading(containerId) {
+            const container = document.getElementById(containerId);
+            container.style.display = 'block';
+            container.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading...</p>
+                </div>
+            `;
+        }
+        
+        function showError(containerId, message) {
+            const container = document.getElementById(containerId);
+            container.style.display = 'block';
+            container.innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+        }
+        
+        function showSuccess(containerId, content) {
+            const container = document.getElementById(containerId);
+            container.style.display = 'block';
+            container.innerHTML = `
+                <div class="success">
+                    ${content}
+                </div>
+            `;
+        }
+        
+        async function analyzePackage() {
+            const packageName = document.getElementById('packageName').value.trim();
+            if (!packageName) {
+                alert('Please enter a package name');
+                return;
+            }
+            
+            showLoading('analysisResults');
+            
+            try {
+                const response = await fetch(`${API_BASE}/npm/analyze/${packageName}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                const statsHtml = `
+                    <h3>📊 Analysis Results for ${data.packageName}@${data.version}</h3>
+                    <p><strong>Description:</strong> ${data.description || 'N/A'}</p>
+                    <p><strong>License:</strong> ${data.license || 'N/A'}</p>
+                    <p><strong>Author:</strong> ${data.author || 'N/A'}</p>
+                    
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">${formatBytes(data.bundleSize?.uncompressed || 0)}</div>
+                            <div class="stat-label">Bundle Size</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.dependencies?.dependenciesCount || 0}</div>
+                            <div class="stat-label">Dependencies</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.security?.vulnerabilityCount || 0}</div>
+                            <div class="stat-label">Vulnerabilities</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${formatNumber(data.popularity?.weeklyDownloads || 0)}</div>
+                            <div class="stat-label">Weekly Downloads</div>
+                        </div>
+                    </div>
+                    
+                    <details>
+                        <summary style="cursor: pointer; font-weight: 600; margin: 16px 0;">View Raw JSON</summary>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </details>
+                `;
+                
+                showSuccess('analysisResults', statsHtml);
+            } catch (error) {
+                showError('analysisResults', error.message);
+            }
+        }
+        
+        async function searchPackages() {
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) {
+                alert('Please enter a search query');
+                return;
+            }
+            
+            showLoading('searchResults');
+            
+            try {
+                const response = await fetch(`${API_BASE}/npm/search?query=${encodeURIComponent(query)}&limit=10`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const packages = await response.json();
+                
+                const resultsHtml = `
+                    <h3>🔎 Search Results for "${query}"</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        ${packages.map(pkg => `
+                            <li style="padding: 8px; border-bottom: 1px solid #e5e7eb;">
+                                <strong>${pkg}</strong>
+                                <button onclick="analyzeFromSearch('${pkg}')" style="margin-left: 10px; padding: 4px 8px; font-size: 12px;" class="btn">Analyze</button>
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+                
+                showSuccess('searchResults', resultsHtml);
+            } catch (error) {
+                showError('searchResults', error.message);
+            }
+        }
+        
+        async function analyzeBundleSize() {
+            const packageName = document.getElementById('bundlePackage').value.trim();
+            if (!packageName) {
+                alert('Please enter a package name');
+                return;
+            }
+            
+            showLoading('bundleResults');
+            
+            try {
+                const response = await fetch(`${API_BASE}/npm/bundle-size/${packageName}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                const bundleHtml = `
+                    <h3>📦 Bundle Size Analysis for ${packageName}</h3>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">${formatBytes(data.uncompressed || 0)}</div>
+                            <div class="stat-label">Uncompressed</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${formatBytes(data.gzipped || 0)}</div>
+                            <div class="stat-label">Gzipped</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.treeshakable ? '✅' : '❌'}</div>
+                            <div class="stat-label">Tree-shakable</div>
+                        </div>
+                    </div>
+                    
+                    <details>
+                        <summary style="cursor: pointer; font-weight: 600; margin: 16px 0;">View Raw JSON</summary>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </details>
+                `;
+                
+                showSuccess('bundleResults', bundleHtml);
+            } catch (error) {
+                showError('bundleResults', error.message);
+            }
+        }
+        
+        async function checkApiStatus() {
+            showLoading('statusResults');
+            
+            try {
+                // Test basic connectivity
+                const response = await fetch(`${API_BASE}/npm/search?query=test&limit=1`);
+                if (!response.ok) {
+                    throw new Error(`Backend not responding: HTTP ${response.status}`);
+                }
+                
+                const statusHtml = `
+                    <h3>✅ Backend Status: Online</h3>
+                    <p><strong>API Base URL:</strong> ${API_BASE}</p>
+                    <p><strong>Status:</strong> Connected and responding</p>
+                    <p><strong>Test Query:</strong> Successful</p>
+                    
+                    <h4>Available Endpoints:</h4>
+                    <ul>
+                        <li>GET /api/v1/npm/analyze/{packageName} - Package analysis</li>
+                        <li>GET /api/v1/npm/search - Package search</li>
+                        <li>GET /api/v1/npm/bundle-size/{packageName} - Bundle size analysis</li>
+                        <li>GET /api/v1/npm/security/{packageName} - Security analysis</li>
+                        <li>GET /api/v1/npm/alternatives/{packageName} - Alternative packages</li>
+                        <li>POST /api/v1/npm/compare - Package comparison</li>
+                        <li>GET /api/v1/npm/reports/pdf/{packageName} - PDF report generation</li>
+                    </ul>
+                `;
+                
+                showSuccess('statusResults', statusHtml);
+            } catch (error) {
+                showError('statusResults', error.message + '. Make sure the Spring Boot backend is running on port 8080.');
+            }
+        }
+        
+        function analyzeFromSearch(packageName) {
+            document.getElementById('packageName').value = packageName;
+            analyzePackage();
+        }
+        
+        function formatBytes(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+        
+        function formatNumber(num) {
+            if (!num || num === 0) return '0';
+            if (num < 1000) return num.toString();
+            if (num < 1000000) return (num / 1000).toFixed(1) + 'K';
+            return (num / 1000000).toFixed(1) + 'M';
+        }
+        
+        // Auto-check API status on load
+        window.onload = function() {
+            checkApiStatus();
+        };
+    </script>
+</body>
+</html>

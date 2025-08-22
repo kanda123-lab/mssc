@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Connection String Builder</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f9fafb;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+        .section {
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .config-section {
+            background-color: #f3f4f6;
+        }
+        .output-section {
+            background-color: #fef3c7;
+        }
+        .template-section {
+            background-color: #ecfdf5;
+        }
+        .examples-section {
+            background-color: #f3f4f6;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #374151;
+        }
+        .input, .select, .textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .textarea {
+            font-family: monospace;
+            background-color: #f9fafb;
+            resize: vertical;
+        }
+        .button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .button-primary {
+            background-color: #10b981;
+            color: white;
+            flex: 1;
+        }
+        .button-primary:hover {
+            background-color: #059669;
+        }
+        .button-secondary {
+            background-color: #6b7280;
+            color: white;
+        }
+        .button-secondary:hover {
+            background-color: #4b5563;
+        }
+        .button-template {
+            padding: 8px 12px;
+            background-color: white;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+        .button-template:hover {
+            background-color: #f3f4f6;
+        }
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .template-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .examples {
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .example-item {
+            margin-bottom: 8px;
+        }
+        .code {
+            color: #6b7280;
+            font-family: monospace;
+        }
+        .success-message {
+            background-color: #dcfce7;
+            color: #166534;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1 class="title">
+                🔗 Database Connection String Builder
+            </h1>
+            <p class="subtitle">
+                Generate connection strings for all major databases
+            </p>
+
+            <div class="grid">
+                <!-- Configuration Panel -->
+                <div>
+                    <div class="section config-section">
+                        <h2 class="section-title">⚙️ Configuration</h2>
+                        
+                        <div class="form-group">
+                            <label class="label">Database Type</label>
+                            <select id="dbType" class="select">
+                                <option value="postgresql">PostgreSQL</option>
+                                <option value="mysql">MySQL</option>
+                                <option value="mongodb">MongoDB</option>
+                                <option value="redis">Redis</option>
+                                <option value="sqlite">SQLite</option>
+                                <option value="mssql">SQL Server</option>
+                                <option value="oracle">Oracle Database</option>
+                                <option value="mariadb">MariaDB</option>
+                                <option value="cassandra">Apache Cassandra</option>
+                                <option value="elasticsearch">Elasticsearch</option>
+                            </select>
+                        </div>
+
+                        <div id="hostField" class="form-group">
+                            <label class="label">Host</label>
+                            <input type="text" id="host" value="localhost" class="input">
+                        </div>
+
+                        <div id="portField" class="form-group">
+                            <label class="label">Port</label>
+                            <input type="number" id="port" value="5432" class="input">
+                        </div>
+
+                        <div id="usernameField" class="form-group">
+                            <label class="label">Username</label>
+                            <input type="text" id="username" value="user" class="input">
+                        </div>
+
+                        <div id="passwordField" class="form-group">
+                            <label class="label">Password</label>
+                            <input type="password" id="password" value="password" class="input">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="label" id="dbLabel">Database Name</label>
+                            <input type="text" id="database" value="mydb" class="input">
+                        </div>
+                    </div>
+
+                    <div class="section template-section">
+                        <h3 class="section-title">⚡ Quick Templates</h3>
+                        <div class="template-grid">
+                            <button class="button-template" onclick="loadTemplate('postgresql')">🐘 PostgreSQL</button>
+                            <button class="button-template" onclick="loadTemplate('mysql')">🐬 MySQL</button>
+                            <button class="button-template" onclick="loadTemplate('mongodb')">🍃 MongoDB</button>
+                            <button class="button-template" onclick="loadTemplate('redis')">🔴 Redis</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output Panel -->
+                <div>
+                    <div class="section output-section">
+                        <h2 class="section-title">📝 Connection String</h2>
+                        
+                        <div class="form-group">
+                            <label class="label">Generated Connection String</label>
+                            <textarea id="connectionString" class="textarea" rows="4" readonly></textarea>
+                        </div>
+
+                        <div class="button-group">
+                            <button id="copyBtn" class="button button-primary">
+                                📋 Copy to Clipboard
+                            </button>
+                            <button id="toggleBtn" class="button button-secondary">
+                                👁️ Show Password
+                            </button>
+                        </div>
+
+                        <div id="successMessage" class="success-message">
+                            ✅ Copied to clipboard successfully!
+                        </div>
+                    </div>
+
+                    <div class="section examples-section">
+                        <h3 class="section-title">💡 Examples</h3>
+                        <div class="examples">
+                            <div class="example-item">
+                                <strong>PostgreSQL:</strong><br>
+                                <span class="code">postgresql://user:password@localhost:5432/database</span>
+                            </div>
+                            <div class="example-item">
+                                <strong>MySQL:</strong><br>
+                                <span class="code">mysql://user:password@localhost:3306/database</span>
+                            </div>
+                            <div class="example-item">
+                                <strong>MongoDB:</strong><br>
+                                <span class="code">mongodb://user:password@localhost:27017/database</span>
+                            </div>
+                            <div class="example-item">
+                                <strong>Redis:</strong><br>
+                                <span class="code">redis://:password@localhost:6379</span>
+                            </div>
+                            <div class="example-item">
+                                <strong>SQLite:</strong><br>
+                                <span class="code">file:///path/to/database.db</span>
+                            </div>
+                            <div class="example-item">
+                                <strong>SQL Server:</strong><br>
+                                <span class="code">Server=localhost,1433;Database=db;User Id=user;Password=pass;</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dbConfigs = {
+            postgresql: { port: 5432, template: 'postgresql://user:password@host:port/database' },
+            mysql: { port: 3306, template: 'mysql://user:password@host:port/database' },
+            mongodb: { port: 27017, template: 'mongodb://user:password@host:port/database' },
+            redis: { port: 6379, template: 'redis://:password@host:port' },
+            sqlite: { port: 0, template: 'file:///path/to/database.db' },
+            mssql: { port: 1433, template: 'Server=host,port;Database=database;User Id=user;Password=password;' },
+            oracle: { port: 1521, template: 'jdbc:oracle:thin:@host:port:database' },
+            mariadb: { port: 3306, template: 'mariadb://user:password@host:port/database' },
+            cassandra: { port: 9042, template: 'host:port' },
+            elasticsearch: { port: 9200, template: 'http://user:password@host:port' }
+        };
+
+        let showPassword = false;
+        let currentConnectionString = '';
+
+        function updateFieldsForDbType() {
+            const dbType = document.getElementById('dbType').value;
+            const isFileDB = dbType === 'sqlite';
+            const config = dbConfigs[dbType];
+            
+            if (config) {
+                document.getElementById('port').value = config.port;
+            }
+            
+            // Show/hide fields
+            document.getElementById('hostField').style.display = isFileDB ? 'none' : 'block';
+            document.getElementById('portField').style.display = isFileDB ? 'none' : 'block';
+            document.getElementById('usernameField').style.display = isFileDB ? 'none' : 'block';
+            document.getElementById('passwordField').style.display = isFileDB ? 'none' : 'block';
+            
+            // Update database label
+            document.getElementById('dbLabel').textContent = isFileDB ? 'Database File Path' : 'Database Name';
+            document.getElementById('database').placeholder = isFileDB ? '/path/to/database.db' : 'database_name';
+            
+            generateConnectionString();
+        }
+
+        function generateConnectionString() {
+            const dbType = document.getElementById('dbType').value;
+            const host = document.getElementById('host').value || 'localhost';
+            const port = document.getElementById('port').value || '5432';
+            const database = document.getElementById('database').value || 'mydb';
+            const username = document.getElementById('username').value || 'user';
+            const password = document.getElementById('password').value || 'password';
+
+            let connectionString = '';
+
+            switch (dbType) {
+                case 'postgresql':
+                    connectionString = `postgresql://${username}:${password}@${host}:${port}/${database}`;
+                    break;
+                case 'mysql':
+                case 'mariadb':
+                    connectionString = `${dbType}://${username}:${password}@${host}:${port}/${database}`;
+                    break;
+                case 'mongodb':
+                    connectionString = `mongodb://${username}:${password}@${host}:${port}/${database}`;
+                    break;
+                case 'redis':
+                    connectionString = `redis://:${password}@${host}:${port}`;
+                    break;
+                case 'sqlite':
+                    connectionString = `file:///${database}`;
+                    break;
+                case 'mssql':
+                    connectionString = `Server=${host},${port};Database=${database};User Id=${username};Password=${password};Encrypt=true;`;
+                    break;
+                case 'oracle':
+                    connectionString = `jdbc:oracle:thin:@${host}:${port}:${database}`;
+                    break;
+                case 'cassandra':
+                    connectionString = `${host}:${port}`;
+                    break;
+                case 'elasticsearch':
+                    connectionString = `http://${username}:${password}@${host}:${port}`;
+                    break;
+                default:
+                    connectionString = `${dbType}://${username}:${password}@${host}:${port}/${database}`;
+            }
+
+            currentConnectionString = connectionString;
+            updateConnectionStringDisplay();
+        }
+
+        function updateConnectionStringDisplay() {
+            const textarea = document.getElementById('connectionString');
+            if (showPassword) {
+                textarea.value = currentConnectionString;
+            } else {
+                textarea.value = maskPassword(currentConnectionString);
+            }
+        }
+
+        function maskPassword(str) {
+            return str
+                .replace(/(password=|:)[^;&@\s]+/gi, '$1***')
+                .replace(/\/\/([^:]+):([^@]+)@/g, '//$1:***@');
+        }
+
+        function togglePasswordVisibility() {
+            showPassword = !showPassword;
+            updateConnectionStringDisplay();
+            document.getElementById('toggleBtn').textContent = showPassword ? '🙈 Hide Password' : '👁️ Show Password';
+        }
+
+        async function copyToClipboard() {
+            try {
+                await navigator.clipboard.writeText(currentConnectionString);
+                const successMessage = document.getElementById('successMessage');
+                successMessage.style.display = 'block';
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                }, 3000);
+            } catch (err) {
+                alert('Copied: ' + currentConnectionString);
+            }
+        }
+
+        function loadTemplate(dbType) {
+            document.getElementById('dbType').value = dbType;
+            const templates = {
+                postgresql: { host: 'localhost', port: 5432, username: 'postgres', password: 'password', database: 'postgres' },
+                mysql: { host: 'localhost', port: 3306, username: 'root', password: 'password', database: 'mysql' },
+                mongodb: { host: 'localhost', port: 27017, username: 'admin', password: 'password', database: 'admin' },
+                redis: { host: 'localhost', port: 6379, username: '', password: 'password', database: '0' }
+            };
+            
+            const template = templates[dbType];
+            if (template) {
+                document.getElementById('host').value = template.host;
+                document.getElementById('port').value = template.port;
+                document.getElementById('username').value = template.username;
+                document.getElementById('password').value = template.password;
+                document.getElementById('database').value = template.database;
+            }
+            
+            updateFieldsForDbType();
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('dbType').addEventListener('change', updateFieldsForDbType);
+            document.getElementById('host').addEventListener('input', generateConnectionString);
+            document.getElementById('port').addEventListener('input', generateConnectionString);
+            document.getElementById('username').addEventListener('input', generateConnectionString);
+            document.getElementById('password').addEventListener('input', generateConnectionString);
+            document.getElementById('database').addEventListener('input', generateConnectionString);
+            document.getElementById('copyBtn').addEventListener('click', copyToClipboard);
+            document.getElementById('toggleBtn').addEventListener('click', togglePasswordVisibility);
+            
+            // Initial generation
+            updateFieldsForDbType();
+        });
+    </script>
+</body>
+</html>
